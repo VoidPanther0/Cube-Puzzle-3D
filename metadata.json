@@ -1,0 +1,6 @@
+{
+  "name": "Cube Puzzle 3D",
+  "description": "Block Blast-style 8x8 3D jewel puzzle game with Classic Endless, Daily Challenge, Cloud Leaderboard, and AI Strategy Coach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
