@@ -1,0 +1,159 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private player profile, settings, career statistics, and resumable Classic Endless board state.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID owning this profile."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Player display name."
+        },
+        "bestScore": {
+          "type": "integer",
+          "description": "All-time highest score achieved."
+        },
+        "highestCombo": {
+          "type": "integer",
+          "description": "Highest consecutive line-clear combo multiplier achieved."
+        },
+        "gamesPlayed": {
+          "type": "integer",
+          "description": "Total completed games."
+        },
+        "totalLinesCleared": {
+          "type": "integer",
+          "description": "Total rows and columns cleared across all games."
+        },
+        "dailyStreak": {
+          "type": "integer",
+          "description": "Current consecutive Daily Challenge completion streak."
+        },
+        "dailyWins": {
+          "type": "integer",
+          "description": "Total Daily Challenges completed."
+        },
+        "lastDailyDate": {
+          "type": "string",
+          "description": "ISO calendar date (YYYY-MM-DD) of the most recent completed Daily Challenge."
+        },
+        "soundEnabled": {
+          "type": "boolean",
+          "description": "Whether synthesized PCM sound effects are enabled."
+        },
+        "hapticsEnabled": {
+          "type": "boolean",
+          "description": "Whether haptic vibration feedback is enabled."
+        },
+        "showLinePreview": {
+          "type": "boolean",
+          "description": "Whether prospective line-clear highlights are shown during drag."
+        },
+        "savedClassicBoard": {
+          "type": "array",
+          "description": "Flattened 64-cell 8x8 board state (0 = empty, 1..7 = jewel color ID) for resuming Classic Endless."
+        },
+        "savedClassicScore": {
+          "type": "integer",
+          "description": "Score of the saved Classic Endless session."
+        },
+        "savedClassicCombo": {
+          "type": "integer",
+          "description": "Active combo streak of the saved Classic Endless session."
+        },
+        "savedClassicTray": {
+          "type": "array",
+          "description": "Up to 3 encoded tray piece descriptors (shapeId:colorId or empty) for the saved Classic session."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation (clients must submit FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (clients must submit FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "bestScore",
+        "highestCombo",
+        "gamesPlayed",
+        "totalLinesCleared",
+        "dailyStreak",
+        "dailyWins",
+        "soundEnabled",
+        "hapticsEnabled",
+        "showLinePreview",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public global leaderboard ranking entry per player without PII.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID owning this leaderboard entry."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Public player display name."
+        },
+        "bestScore": {
+          "type": "integer",
+          "description": "Player best score on the global leaderboard."
+        },
+        "highestCombo": {
+          "type": "integer",
+          "description": "Player highest combo streak."
+        },
+        "dailyWins": {
+          "type": "integer",
+          "description": "Total Daily Challenges completed."
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Marks leaderboard entry as visible on the global leaderboard."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last leaderboard update (clients must submit FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "bestScore",
+        "highestCombo",
+        "dailyWins",
+        "isPublic",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Per-user private game profile, settings, stats, and resumable Classic board state."
+    },
+    "/leaderboard/{userId}": {
+      "schema": {
+        "$ref": "#/entities/LeaderboardEntry"
+      },
+      "description": "Global leaderboard scores readable by authenticated players and writable only by the owning player."
+    }
+  }
+}

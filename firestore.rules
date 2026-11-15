@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.bestScore is int && data.bestScore >= 0 && data.bestScore <= 100000000 &&
+             data.highestCombo is int && data.highestCombo >= 0 && data.highestCombo <= 10000 &&
+             data.gamesPlayed is int && data.gamesPlayed >= 0 && data.gamesPlayed <= 1000000 &&
+             data.totalLinesCleared is int && data.totalLinesCleared >= 0 && data.totalLinesCleared <= 100000000 &&
+             data.dailyStreak is int && data.dailyStreak >= 0 && data.dailyStreak <= 36500 &&
+             data.dailyWins is int && data.dailyWins >= 0 && data.dailyWins <= 36500 &&
+             (!('lastDailyDate' in data) || (data.lastDailyDate is string && data.lastDailyDate.size() <= 20)) &&
+             data.soundEnabled is bool &&
+             data.hapticsEnabled is bool &&
+             data.showLinePreview is bool &&
+             (!('savedClassicBoard' in data) || (data.savedClassicBoard is list && data.savedClassicBoard.size() <= 64 && (data.savedClassicBoard.size() == 0 || data.savedClassicBoard[0] is int))) &&
+             (!('savedClassicScore' in data) || (data.savedClassicScore is int && data.savedClassicScore >= 0 && data.savedClassicScore <= 100000000)) &&
+             (!('savedClassicCombo' in data) || (data.savedClassicCombo is int && data.savedClassicCombo >= 0 && data.savedClassicCombo <= 10000)) &&
+             (!('savedClassicTray' in data) || (data.savedClassicTray is list && data.savedClassicTray.size() <= 3 && (data.savedClassicTray.size() == 0 || data.savedClassicTray[0] is string))) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.bestScore is int && data.bestScore >= 0 && data.bestScore <= 100000000 &&
+             data.highestCombo is int && data.highestCombo >= 0 && data.highestCombo <= 10000 &&
+             data.dailyWins is int && data.dailyWins >= 0 && data.dailyWins <= 36500 &&
+             data.isPublic is bool && data.isPublic == true &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'bestScore', 'highestCombo',
+                         'gamesPlayed', 'totalLinesCleared', 'dailyStreak', 'dailyWins',
+                         'soundEnabled', 'hapticsEnabled', 'showLinePreview',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'bestScore', 'highestCombo',
+                         'gamesPlayed', 'totalLinesCleared', 'dailyStreak', 'dailyWins',
+                         'lastDailyDate', 'soundEnabled', 'hapticsEnabled', 'showLinePreview',
+                         'savedClassicBoard', 'savedClassicScore', 'savedClassicCombo', 'savedClassicTray',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Update game progress, stats, or saved board
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'displayName', 'bestScore', 'highestCombo', 'gamesPlayed',
+                           'totalLinesCleared', 'dailyStreak', 'dailyWins', 'lastDailyDate',
+                           'savedClassicBoard', 'savedClassicScore', 'savedClassicCombo', 'savedClassicTray',
+                           'updatedAt'
+                         ]) ||
+                         // Action: Update user settings
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'soundEnabled', 'hapticsEnabled', 'showLinePreview', 'updatedAt'
+                         ])
+                       );
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+
+    match /leaderboard/{userId} {
+      allow get: if isSignedIn() && isValidId(userId);
+      allow list: if isSignedIn() && existing().isPublic == true;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'bestScore', 'highestCombo', 'dailyWins', 'isPublic', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'bestScore', 'highestCombo', 'dailyWins', 'isPublic', 'updatedAt'
+                       ]) &&
+                       isValidLeaderboardEntry(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidLeaderboardEntry(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'bestScore', 'highestCombo', 'dailyWins', 'isPublic', 'updatedAt'
+                       ]);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+    }
+  }
+}
